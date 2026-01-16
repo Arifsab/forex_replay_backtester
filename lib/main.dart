@@ -468,3 +468,342 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+class _TopInfoBar extends StatelessWidget {
+  final String csvName;
+  final String symbol;
+  final String timeframe;
+  final int index;
+  final int total;
+  final DateTime? currentTime;
+  final ValueChanged<String> onSymbolChange;
+
+  const _TopInfoBar({
+    required this.csvName,
+    required this.symbol,
+    required this.timeframe,
+    required this.index,
+    required this.total,
+    required this.currentTime,
+    required this.onSymbolChange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final df = DateFormat("yyyy-MM-dd HH:mm");
+    return Card(
+      margin: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Wrap(
+          runSpacing: 10,
+          spacing: 14,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text("CSV: $csvName"),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Symbol: "),
+                SizedBox(
+                  width: 90,
+                  child: TextFormField(
+                    initialValue: symbol,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: onSymbolChange,
+                  ),
+                ),
+              ],
+            ),
+            Text("TF: $timeframe"),
+            Text("Candle: ${min(index + 1, total)}/$total"),
+            if (currentTime != null) Text("Time: ${df.format(currentTime!)}"),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChartCard extends StatelessWidget {
+  final List<Candle> candles;
+  final double? entry;
+  final double? sl;
+  final double? tp;
+  final ValueChanged<double> onTapSetLevel;
+
+  const _ChartCard({
+    required this.candles,
+    required this.entry,
+    required this.sl,
+    required this.tp,
+    required this.onTapSetLevel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (candles.isEmpty) {
+      return const Center(child: Text("Import a CSV to start replay ✅"));
+    }
+
+    final minP = candles.map((c) => c.low).reduce(min);
+    final maxP = candles.map((c) => c.high).reduce(max);
+
+    return Card(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return GestureDetector(
+            onTapDown: (d) {
+              final y = d.localPosition.dy / constraints.maxHeight;
+              onTapSetLevel(y.clamp(0.0, 1.0));
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: LineChart(
+                LineChartData(
+                  minY: minP,
+                  maxY: maxP,
+                  gridData: const FlGridData(show: true),
+                  titlesData: const FlTitlesData(show: false),
+                  borderData: FlBorderData(show: true),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: List.generate(
+                        candles.length,
+                        (i) => FlSpot(i.toDouble(), candles[i].close),
+                      ),
+                      isCurved: false,
+                      dotData: const FlDotData(show: false),
+                      barWidth: 2,
+                    ),
+                  ],
+                  extraLinesData: ExtraLinesData(
+                    horizontalLines: [
+                      if (entry != null)
+                        HorizontalLine(
+                          y: entry!,
+                          strokeWidth: 1.5,
+                          dashArray: [8, 4],
+                          label: HorizontalLineLabel(
+                            show: true,
+                            alignment: Alignment.topLeft,
+                            labelResolver: (_) => "Entry",
+                          ),
+                        ),
+                      if (sl != null)
+                        HorizontalLine(
+                          y: sl!,
+                          strokeWidth: 1.5,
+                          dashArray: [8, 4],
+                          label: HorizontalLineLabel(
+                            show: true,
+                            alignment: Alignment.topLeft,
+                            labelResolver: (_) => "SL",
+                          ),
+                        ),
+                      if (tp != null)
+                        HorizontalLine(
+                          y: tp!,
+                          strokeWidth: 1.5,
+                          dashArray: [8, 4],
+                          label: HorizontalLineLabel(
+                            show: true,
+                            alignment: Alignment.topLeft,
+                            labelResolver: (_) => "TP",
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _BottomControls extends StatelessWidget {
+  final bool playing;
+  final double speed;
+  final int window;
+  final String side;
+  final VoidCallback onPlayPause;
+  final VoidCallback onNext;
+  final VoidCallback onPrev;
+  final ValueChanged<double> onSpeedChanged;
+  final ValueChanged<int> onWindowChanged;
+  final ValueChanged<String> onSideChanged;
+  final VoidCallback onResetLevels;
+  final VoidCallback onSaveTrade;
+  final double? entry;
+  final double? sl;
+  final double? tp;
+
+  const _BottomControls({
+    required this.playing,
+    required this.speed,
+    required this.window,
+    required this.side,
+    required this.onPlayPause,
+    required this.onNext,
+    required this.onPrev,
+    required this.onSpeedChanged,
+    required this.onWindowChanged,
+    required this.onSideChanged,
+    required this.onResetLevels,
+    required this.onSaveTrade,
+    required this.entry,
+    required this.sl,
+    required this.tp,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: onPrev,
+                  icon: const Icon(Icons.skip_previous),
+                  label: const Text("Prev"),
+                ),
+                ElevatedButton.icon(
+                  onPressed: onPlayPause,
+                  icon: Icon(playing ? Icons.pause : Icons.play_arrow),
+                  label: Text(playing ? "Pause" : "Play"),
+                ),
+                ElevatedButton.icon(
+                  onPressed: onNext,
+                  icon: const Icon(Icons.skip_next),
+                  label: const Text("Next"),
+                ),
+                DropdownButton<String>(
+                  value: side,
+                  items: const [
+                    DropdownMenuItem(value: "BUY", child: Text("BUY")),
+                    DropdownMenuItem(value: "SELL", child: Text("SELL")),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) onSideChanged(v);
+                  },
+                ),
+                OutlinedButton.icon(
+                  onPressed: onResetLevels,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text("Reset Levels"),
+                ),
+                FilledButton.icon(
+                  onPressed: onSaveTrade,
+                  icon: const Icon(Icons.save),
+                  label: const Text("Save Trade"),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 14,
+              runSpacing: 10,
+              alignment: WrapAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text("Speed: "),
+                    SizedBox(
+                      width: 180,
+                      child: Slider(
+                        value: speed,
+                        min: 1,
+                        max: 10,
+                        divisions: 9,
+                        label: "${speed.toStringAsFixed(0)}x",
+                        onChanged: onSpeedChanged,
+                      ),
+                    ),
+                    Text("${speed.toStringAsFixed(0)}x"),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text("Window: "),
+                    DropdownButton<int>(
+                      value: window,
+                      items: const [
+                        DropdownMenuItem(value: 60, child: Text("60")),
+                        DropdownMenuItem(value: 120, child: Text("120")),
+                        DropdownMenuItem(value: 200, child: Text("200")),
+                        DropdownMenuItem(value: 400, child: Text("400")),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) onWindowChanged(v);
+                      },
+                    ),
+                  ],
+                ),
+                Text("Entry: ${entry?.toStringAsFixed(5) ?? "-"}"),
+                Text("SL: ${sl?.toStringAsFixed(5) ?? "-"}"),
+                Text("TP: ${tp?.toStringAsFixed(5) ?? "-"}"),
+                const Text("Tap chart to set Entry → SL → TP"),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TradesPanel extends StatelessWidget {
+  final List<Trade> trades;
+  final Future<void> Function(String id) onDelete;
+
+  const _TradesPanel({required this.trades, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    if (trades.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: Center(child: Text("No trades saved yet. Save trades ✅")),
+      );
+    }
+
+    final df = DateFormat("yyyy-MM-dd HH:mm");
+
+    return Card(
+      margin: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      child: ListView.separated(
+        itemCount: trades.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, i) {
+          final t = trades[i];
+          return ListTile(
+            title: Text(
+              "${t.symbol} ${t.timeframe} | ${t.side} | ${t.entry.toStringAsFixed(5)}",
+            ),
+            subtitle: Text(
+              "${df.format(t.time)} | SL: ${t.sl.toStringAsFixed(5)} TP: ${t.tp.toStringAsFixed(5)}",
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () => onDelete(t.id),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
