@@ -99,12 +99,12 @@ class _ForexReplayAppState extends State<ForexReplayApp> {
       themeMode: mode,
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         brightness: Brightness.light,
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         brightness: Brightness.dark,
       ),
       home: HomeScreen(
@@ -228,7 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int idxClose = header.indexWhere((h) => h.toLowerCase() == "close");
 
     if ([idxDate, idxOpen, idxHigh, idxLow, idxClose].any((i) => i < 0)) {
-      _showMsg("CSV invalid. Required: Date,Open,High,Low,Close");
+      _showMsg("CSV invalid. Required columns: Date,Open,High,Low,Close");
       return;
     }
 
@@ -697,6 +697,4 @@ class _BottomControls extends StatelessWidget {
                       max: 10,
                       divisions: 9,
                       label: "${speed.toStringAsFixed(0)}x",
-                      onChanged: onSpeedChanged,
-                    ),
-           
+                 
