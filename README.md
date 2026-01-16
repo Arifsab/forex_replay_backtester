@@ -1,1 +1,3 @@
-# forex_replay_backtester
+# Forex Replay Backtester (Flutter)
+
+Offline CSV replay & journaling MVP.
